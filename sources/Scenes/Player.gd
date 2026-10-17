@@ -497,9 +497,9 @@ func checkInput() :
                         myTeam.posession = false
                         var passV = myTeam._findPass( translation , passD , myID)
                         if ( passV) :
-                                # FC27: potencia adaptativa con minimo garantizado
+                                # FC: potencia de pase segun distancia
                                 var plen = myTeam.passDir.length()
-                                var pmul = clamp( plen * 0.022 + 0.55 , 1.0 , 1.45)
+                                var pmul = clamp( plen * 0.022 + 0.55 , 0.8 , 1.45)
                                 ball._passBall( myTeam.passDir * pmul , self , Input.is_action_pressed( clow))
                                 # FC v2.2: control inmediato del receptor
                                 if not myTeam.AIteam and myTeam.passto :

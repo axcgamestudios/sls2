@@ -43,6 +43,12 @@
 - Entornos: **tonemap filmic**, glow sutil (bloom umbral 0.92), contraste
   1.09 / saturación 1.14.
 
+### Fusión v2.2.1
+- Integrado el **latch frame-perfecto de saques** (tiros libres / bandas) y el fix
+  de **rozamientos en vuelo** (pases rápidos que rozan un cuerpo ya no mueren).
+- **pasto3.jpeg** es ahora la BASE dominante de la textura (con parches de
+  pasto2/pasto.jpeg + todo el pipeline de escala/franjas/líneas).
+
 ### 4. Controles (teclado)
 `WASD` mover · `M` pase · `L` chip/globo · `I` filtrado · `J` tiro (cargar) ·
 `O` tenso/raso · `Q` sprint · `E` raso · `P`/`U` cambiar jugador
