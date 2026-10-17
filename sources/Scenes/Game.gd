@@ -17,6 +17,9 @@ enum shotType{ SHOT , VOLLEY , FREEKICK , HEADER , DIVINGHEADER , BICYCLE , OWNG
 var shottype = 0
 var recording : bool
 var frame : int
+var diagT2 = 0.0
+var fkTapLatch = 0.0
+var fkTapIs = ""
 var fframe : float
 var slowframe : int
 var startframe : int
@@ -381,6 +384,20 @@ func _process( delta) :
                         ref.process( delta)
         elif state == gameState.WINNER :
                 checkInput()
+        # FC27: latch frame-perfecto de toques para saques
+        # (el poll del timer de 0.1s pierde toques rapidos de <80ms)
+        if state == gameState.RESTARTFK or state == gameState.RESTARTTHROW :
+                if Input.is_action_just_pressed( fkpass) :
+                        fkTapLatch = 0.25
+                        fkTapIs = "pass"
+                elif Input.is_action_just_pressed( fkchip) :
+                        fkTapLatch = 0.25
+                        fkTapIs = "chip"
+                elif Input.is_action_just_pressed( fkshoot) :
+                        fkTapLatch = 0.25
+                        fkTapIs = "shoot"
+                if fkTapLatch > 0.0 :
+                        fkTapLatch -= delta
 func _physics_process( delta) :
         var tt
         for m in range( 0 , 14) :
@@ -643,7 +660,8 @@ func restartFKAI() :
         goGamePen()
 func restartFk() :
         fktarget = null
-        if Input.is_action_pressed( fkshoot) :
+        if Input.is_action_pressed( fkshoot) or ( fkTapLatch > 0.0 and fkTapIs == "shoot") :
+                fkTapLatch = 0.0
                 kickTaker._loseControl()
                 kickTaker.isAI = true
                 kickTaker.AI.fkdir = fkdir
@@ -654,7 +672,8 @@ func restartFk() :
                 $VPC/VP/GameGroup/ThreeDLine.drawP = false
                 mainCam.current = true
                 hud._hideScorer()
-        elif Input.is_action_pressed( fkpass) :
+        elif Input.is_action_pressed( fkpass) or ( fkTapLatch > 0.0 and fkTapIs == "pass") :
+                fkTapLatch = 0.0
                 mainCam.current = true
                 kickTaker._loseControl()
                 kickTaker.isAI = true
@@ -665,7 +684,8 @@ func restartFk() :
                 yield ( get_tree().create_timer( 0.5) , "timeout")
                 goGamePen()
                 kickTaker.canControl = true
-        elif Input.is_action_pressed( fkchip) :
+        elif Input.is_action_pressed( fkchip) or ( fkTapLatch > 0.0 and fkTapIs == "chip") :
+                fkTapLatch = 0.0
                 mainCam.current = true
                 kickTaker._loseControl()
                 kickTaker.isAI = true
@@ -701,7 +721,8 @@ func restartFk() :
                 $Timers/Timer.wait_time = 0.1
                 $Timers/Timer.start()
 func restartThrow() :
-        if Input.is_action_pressed( fkpass) :
+        if Input.is_action_pressed( fkpass) or ( fkTapLatch > 0.0 and fkTapIs == "pass") :
+                fkTapLatch = 0.0
                 mainCam.current = true
                 kickTaker._loseControl()
                 kickTaker.isAI = true

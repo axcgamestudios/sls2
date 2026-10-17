@@ -477,12 +477,21 @@ func checkInput() :
                         myTeam.posession = false
                         var passV = myTeam._findPass( translation , passD , myID)
                         if ( passV) :
-                                # FC: potencia de pase segun distancia
+                                # FC27: potencia adaptativa con minimo garantizado
                                 var plen = myTeam.passDir.length()
-                                var pmul = clamp( plen * 0.022 + 0.55 , 0.8 , 1.45)
+                                var pmul = clamp( plen * 0.022 + 0.55 , 1.0 , 1.45)
                                 ball._passBall( myTeam.passDir * pmul , self , Input.is_action_pressed( clow))
                         else :
-                                ball._passBall( velocity , self)
+                                # FC27: sin receptor - pase adelante con direccion real
+                                # (antes: velocity del jugador = pase muerto si estabas quieto)
+                                var fdir = - transform.basis.z
+                                fdir.y = 0.0
+                                if fdir.length_squared() < 0.01 :
+                                        fdir = Vector3( myTeam.playDir , 0 , 0)
+                                fdir = fdir.normalized()
+                                var vlen = velocity.length()
+                                var pw = max( 26.0 , min( vlen * 1.8 , 45.0))
+                                ball._passBall( fdir * pw + velocity * 0.35 , self)
                         AI._losePosession()
         elif ( Input.is_action_pressed( cpass)) :
                 if ( not AI._hasBall()) :

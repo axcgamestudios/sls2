@@ -7,7 +7,7 @@ var Game = null
 var oob = false
 var oobpos = Vector3.ZERO
 var trail = null
-var minPassSpeed = 30
+var minPassSpeed = 48
 var maxPassSpeed = 105
 var doHit = false
 var rayC = null
@@ -137,19 +137,26 @@ func _passBall( var direction , var passer , var driven : bool = false) :
         lastPlayer = null
         player = null
         var dl = direction.length()
-        if dl < 1.0 :
-                # fix: pase de seguridad hacia delante si no hay direccion
-                direction = - passer.transform.basis.z * 20.0
+        if dl < 3.0 :
+                # FC27: pase de seguridad hacia delante SIEMPRE con potencia decente
+                direction = - passer.transform.basis.z
                 direction.y = 0.0
+                if direction.length_squared() < 0.01 :
+                        direction = Vector3( passer.myTeam.playDir , 0 , 0)
+                direction = direction.normalized() * 24.0
                 dl = direction.length()
         var dr = direction
         var ddl = max( minPassSpeed , min( dl , maxPassSpeed))
         if driven :
-                # FC: pase tenso - mas rapido y ras al suelo
+                # FC27: pase tenso - mas rapido y ras al suelo
                 ddl *= 1.15
         isShot = false
         $BallPassed.play()
         var upv = 5.0
+        # FC27: arco adaptativo - los pases medios/largos vuelan sobre el trafico
+        # (antes todos rasos a 5: golpeaban cuerpos en ruta y morian a 0.5 m/s)
+        if not driven and ddl > 42.0 :
+                upv = 5.0 + ( ddl - 42.0) * 0.11
         if driven :
                 upv = 1.5
         apply_central_impulse( dr * ( ddl/dl) + Vector3( 0 , upv , 0))
@@ -256,8 +263,13 @@ func _on_Ball_body_entered( body) :
         elif ( state == bstate.OPEN) and body.get_collision_layer_bit( 7) :
                 lastPlayer = body.get_parent()
                 lastPlayer._ballHit()
-                linear_velocity *= 0.75
-                apply_central_impulse( Vector3( 0 , - 5 , 0))
+                # FC27: los pases en vuelo no mueren al rozar un cuerpo
+                var sp = linear_velocity.length()
+                if sp > 20.0 :
+                        linear_velocity *= 0.94
+                else :
+                        linear_velocity *= 0.75
+                        apply_central_impulse( Vector3( 0 , - 5 , 0))
                 Game._hitP()
 func _on_Ball_input_event( _camera , _event , _click_position , _click_normal , _shape_idx) :
         pass

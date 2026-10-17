@@ -359,6 +359,10 @@ func _findPass( pos , lookD , id) :
         var tol = 0.05
         var dl = 0
         var dd = 0
+        # FC27: fallback - compañero mas cercano si nadie va en la direccion
+        var nearest = null
+        var nearestd = 1000000
+        var haslook = lookD.length_squared() > 0.01
         for i in range( 1 , 7) :
                 if i != id :
                         diff = ( ( players[ i].translation) + ( players[ i].velocity * 0.3)) - Global.ballpos
@@ -380,9 +384,26 @@ func _findPass( pos , lookD , id) :
                                         res = diff
                                         dl = score
                                         best = dd
+                        # FC27: registrar el mas cercano como respaldo
+                        if players[ i].carded <= 1 :
+                                var nd = diff.length_squared()
+                                if nd < nearestd :
+                                        nearestd = nd
+                                        nearest = players[ i]
+        # FC27: si la busqueda direccional no dio candidato valido, usar el mas cercano
+        if not candidate and nearest and ( not haslook or dl < 0.2) :
+                candidate = nearest
+                res = ( nearest.translation + nearest.velocity * 0.3) - Global.ballpos
+                dl = 0.2
         if ( candidate) :
                 passDir = res
                 passDir.y = 0
+                # FC27: potencia de pase garantizada - nunca un pase muerto
+                var plen = passDir.length()
+                if plen < 10.0 :
+                        # receptor muy cerca: asegurar impulso minimo dirigiendolo
+                        # un poco mas alla del receptor para que llegue con vida
+                        passDir = passDir.normalized() * max( plen , 10.0)
                 # FC: error de pase segun distancia (pases largos menos precisos)
                 var perr = smoothstep( 25.0 , 95.0 , res.length()) * 0.055
                 passDir = passDir.rotated( Vector3.UP , rand_range( - perr , perr))
