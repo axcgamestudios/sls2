@@ -392,6 +392,12 @@ func _findPass( pos , lookD , id) :
         if ( candidate) :
                 passDir = res
                 passDir.y = 0
+                # FC27: potencia de pase garantizada - nunca un pase muerto
+                var plen = passDir.length()
+                if plen < 10.0 :
+                        # receptor muy cerca: asegurar impulso minimo dirigiendolo
+                        # un poco mas alla del receptor para que llegue con vida
+                        passDir = passDir.normalized() * max( plen , 10.0)
                 # FC: error de pase segun distancia (pases largos menos precisos)
                 var perr = smoothstep( 25.0 , 95.0 , res.length()) * 0.055
                 passDir = passDir.rotated( Vector3.UP , rand_range( - perr , perr))
