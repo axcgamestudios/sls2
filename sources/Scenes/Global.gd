@@ -449,6 +449,9 @@ func updateKeyBinding() :
         change_action_key( "p1_chip" , buttsk[ 2])
         change_action_key( "p1_thru" , buttsk[ 3])
         change_action_key( "p1_burst" , shoulderk[ 2])
+        # fix: el teclado no tenia p1_low ni p1_switch
+        change_action_key( "p1_low" , shoulderk[ 3])
+        change_action_key( "p1_switch" , OS.find_scancode_from_string( "U"))
 func change_action_key( var action , var keycode) :
         var nevent = InputEventKey.new()
         nevent.set_scancode( keycode)

@@ -7,8 +7,8 @@ var Game = null
 var oob = false
 var oobpos = Vector3.ZERO
 var trail = null
-var minPassSpeed = 65
-var maxPassSpeed = 100
+var minPassSpeed = 30
+var maxPassSpeed = 105
 var doHit = false
 var rayC = null
 var shotV = Vector3.ZERO
@@ -129,7 +129,7 @@ func _shootBall( var shootr , var direction , var curldirection) :
         shotV = linear_velocity
         $BallKicked.play()
         hitCount = 0
-func _passBall( var direction , var passer) :
+func _passBall( var direction , var passer , var driven : bool = false) :
         oob = false
         linear_velocity *= 0.1
         state = bstate.OPEN
@@ -137,11 +137,22 @@ func _passBall( var direction , var passer) :
         lastPlayer = null
         player = null
         var dl = direction.length()
+        if dl < 1.0 :
+                # fix: pase de seguridad hacia delante si no hay direccion
+                direction = - passer.transform.basis.z * 20.0
+                direction.y = 0.0
+                dl = direction.length()
         var dr = direction
         var ddl = max( minPassSpeed , min( dl , maxPassSpeed))
+        if driven :
+                # FC: pase tenso - mas rapido y ras al suelo
+                ddl *= 1.15
         isShot = false
         $BallPassed.play()
-        apply_central_impulse( dr * ( ddl/dl) + Vector3( 0 , 5 , 0))
+        var upv = 5.0
+        if driven :
+                upv = 1.5
+        apply_central_impulse( dr * ( ddl/dl) + Vector3( 0 , upv , 0))
 func _crossBall( var direction , var passer , var curld , var islow) :
         linear_velocity *= 0.25
         var d = direction

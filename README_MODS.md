@@ -1,64 +1,86 @@
-# Super Liquid Soccer — Mejoras v2.0
+# Super Liquid Soccer — Mejoras v2.1 (estilo FC)
 
-Este update moderniza los gráficos, la física del balón y la interfaz del juego,
-además de usar `pasto.jpeg` como textura realista del campo.
+Este update añade la textura `pasto2.png` del usuario, mecánicas de juego estilo
+FC (regates, tiros finura, tiros picados, pases inteligentes), rediseño del radar,
+mejoras en los modelos de jugadores y corrección de varios bugs.
 
-## 1. Textura de pasto realista
+## 1. Textura de pasto (pasto2.png)
 
-- Se generó una textura compuesta a partir de `pasto.jpeg` (1024×1024):
-  mosaico espejado a 2048×1450, franjas de corte sutiles (como el campo original)
-  y las líneas blancas del campo extraídas de la textura original.
+- Mosaico 2048×1450 construido desde `pasto2.png` con **tiles rotados/espejados
+  aleatoriamente** y micro-variación de brillo por tile (rompe la repetición).
+- Franjas de corte + líneas blancas extraídas de la textura original.
+- Upscale con máscara de nitidez y saturación +10%.
 - Formato `.stex` (GDST + WebP + 12 mipmaps) compatible con Godot 3.5.1.
-- Reemplaza `.import/field2knew.png-46ca539b10c11454cb64d2df71915be9.stex`.
-- La zona fuera del campo se oscurece levemente para dar profundidad.
 
-## 2. Gráficos, luces y sombras
+## 2. Mecánicas estilo FC
 
-| Elemento | Antes | Ahora |
+| Mecánica | Control (teclado) | Efecto |
 |---|---|---|
-| Sombreado | `force_vertex_shading = true` | Desactivado (iluminación por píxel) |
-| Atlas de sombras | 1024 px (viewport) | 4096 px, 4 cuadrantes |
-| Direccional (partido) | bias 1.0, splits sin blending | bias 0.35, normal bias 0.8, blend de splits |
-| Sombras por defecto | OFF | ON (con migración de config para usuarios existentes) |
-| Tonemap / ambiente | exposure 0.75 | 0.95 + ajustes (brillo 1.04, contraste 1.07, saturación 1.12) |
-| Glow | bloom 1.0 | bloom 0.7, fuerza 0.6 |
-| Material del campo | vertex lighting, sin sombreado | Lambert por píxel, roughness 1.0 |
-| Entorno del campo | marrón | verde césped |
+| **Elastico / stepover** | Doble toque rápido de `P` (sprint) con dirección | Toca el balón en diagonal + explosión de velocidad, animación scissor |
+| **La croqueta** | `O` (R2) + dirección lateral | Desvío lateral rápido del balón con paso lateral |
+| **Tiro fingido (fake shot)** | `J` cargando y luego `M` | Cancela el tiro, amago + aceleración |
+| **Tiro picado (chip)** | `L` cerca del área orientado a puerta | Balón por elevación sobre el portero (arco balístico calculado) |
+| **Tiro de finura** | `O` (raso) + aim lateral al soltar `J` | +55% de efecto lateral, −14% potencia (colocado) |
+| **Pase tenso** | Mantener `O` al pasar con `M` | Pase raso y más rápido |
 
-## 3. Física realista del balón
+La **IA también regatea**: cuando un rival presiona a un jugador con agilidad alta,
+hace elasticones para escapar (probabilidad según `pAgility`).
 
-- **Rebote**: 0.15 → 0.55 (un balón real rebota ~0.6 en césped).
-- **Fricción**: 0.5 → 0.7.
-- **Amortiguación lineal**: 0.2 → 0.08; **angular**: 2.2 → 0.8.
-- **Resistencia aerodinámica cuadrática** (`F = -k·|v|·v`) en `_physics_process`.
-- **Fricción de rodadura** cuando el balón rueda por el suelo.
-- **Decay del efecto (curl/Magnus) independiente del framerate**
-  (`pow(0.994, delta·60)` en vez de `*= 0.995` por frame).
+## 3. Sistema de pases / centros / tiros
 
-## 4. Interfaz
+- **Potencia de pase adaptativa a la distancia** (el balón llega en ~0.6 s en
+  lugar de velocidad fija): `minPassSpeed` 65→30, `maxPassSpeed` 100→105.
+- **Anticipación del receptor** mejorada (0.3 s de lead) y pases filtrados que
+  adelantan la carrera del receptor 6 m al espacio.
+- **Error angular de pase** proporcional a la distancia (pases largos menos
+  precisos, como en la vida real).
+- **Centros inteligentes**: se elige el mejor atacante en el área (cerca de
+  portería, desmarcado, con mejor `pShoot`) y se adelanta su carrera 0.55 s,
+  en vez de un punto aleatorio.
+- Barra de potencia de tiro estable a cualquier framerate (`delta`-escalada).
 
-- **Tema global (UI.tres)**: botones dorados con relleno, estados hover/pressed
-  con sombras, foco brillante, selección dorada en listas.
-- **HUD**: panel translúcido redondeado con borde dorado detrás del marcador;
-  tipografía del marcador con contorno para legibilidad.
-- **Menú**: fondo con degradado, versión 2.0.0.
-- **Pantalla de carga (index.html)**: título "Super Liquid Soccer", barra de
-  progreso dorada redondeada, fondo verde con degradado radial, spinner dorado.
-- Título de la pestaña: `blueskywrld` → `Super Liquid Soccer`.
+## 4. UI
 
-## 5. Estructura del repo
+- **Radar estilo FC**: puntos de equipo más grandes y visibles, balón blanco
+  destacado, **anillo dorado que marca al jugador controlado**, fondo oscuro
+  semitransparente y opacidad subida (0.59→0.95).
+- **Posesión en vivo**: estadística acumulada por equipo, mostrada como
+  "Posesión 58% - 42%" en el descanso.
+- **Panel de controles de pausa ampliado**: 13 filas con las nuevas mecánicas
+  (switch `U`, tiro raso/finura `O`, regate `2xP`, tiro picado `L`), traducido
+  a los 7 idiomas.
+- Nombres de jugador controlado más legibles (más brillo, reposicionados).
+- Versión visible: 2.1.0.
 
-- `index.pck` — paquete del juego re-generado (scripts recompilados).
-- `sources/` — **scripts GDScript descompilados y legibles** (espejo de `res://`),
-  con las modificaciones aplicadas. Útiles para editar el juego en el editor
-  de Godot 3.5.1 y volver a exportar.
-- `pasto.jpeg` — textura original de pasto (fuente de la nueva textura).
+## 5. Modelos de jugadores
 
-## Herramientas usadas (pipeline de modificación)
+- Shader del jugador (embebido en `newPlayer.tres`): **rim light** de estadio,
+  `SPECULAR` 0→0.35 (brillo atlético/piel sudada) y `ROUGHNESS` suavizado.
 
-1. Extracción del PCK (formato v1 de Godot 3.5.1).
-2. Decompilación del bytecode `.gdc` (v13: tokens de longitud variable,
-   identificadores XOR 0xB6 — formato stock del motor) → GDScript.
-3. Edición de scripts/escenas/materiales.
-4. Recompilación con Godot 3.5.1 headless (`--export-pack`).
-5. Re-empaquetado del PCK (TOC + MD5 verificados).
+## 6. Bugs corregidos
+
+- **Teclado sin `p1_low` ni `p1_switch`**: ahora `O` (R2) y `U`.
+- **NaN en `_passBall`**: pasar sin dirección ya no lanza el balón al infinito
+  (pase de seguridad hacia delante).
+- **Leak del minimapa**: los puntos se duplicaban en cada partido (14, 28, 42…);
+  ahora se liberan y limpian.
+- **Color del minimapa off-by-one**: el dorsal 6 del equipo 1 se pintaba con el
+  color rival.
+- **ColorRect del radar tapaba el punto del balón** (z_index corregido).
+- Carga de `shotcharge` dependiente del framerate.
+
+## 7. Estructura del repo
+
+- `index.pck` — paquete regenerado (scripts recompilados + recursos nuevos).
+- `sources/` — scripts GDScript legibles con los cambios (espejo de `res://`).
+- `pasto.jpeg`, `pasto2.png` — texturas de pasto (fuente).
+- Herramientas del pipeline en el historial de commits previos (extractor,
+  decompilador, empaquetador, verificador, generadores de textura).
+
+## Pipeline (idéntico a v2.0)
+
+1. Edición de scripts/recursos en el proyecto export.
+2. Validación de sintaxis con Godot 3.5.1 headless (`--check-only`).
+3. Compilación `--export-pack` → `.gdc`.
+4. Re-empaquetado del PCK v1 (TOC + MD5 verificados).
+5. Prueba end-to-end en navegador headless (sin errores de consola).
