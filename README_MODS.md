@@ -1,4 +1,55 @@
-# Super Liquid Soccer — Mejoras v2.1 (estilo FC)
+# Super Liquid Soccer — Mejoras v2.2
+
+> **v2.2 — FIX CRÍTICO DE PASES + GRÁFICOS REALES**: pases que se quedaban
+> sueltos arreglados de raíz, escala del pasto corregida, sombreado por píxel
+> y sombras 4096 activadas de verdad (antes `ProjectSettings` en runtime no
+> tenía efecto — ahora el `project.binary` del PCK va parcheado).
+
+## v2.2 — Qué se arregló y mejoró
+
+### 1. FIX del sistema de pases (el bug "le pico y suelto la pelota")
+- **Causa raíz**: si pulsabas pase **sin dirección de aim**, `_findPass`
+  no encontraba candidato (score 0 > 0 nunca) y el balón se pasaba con
+  `velocity` (~0) → la pelota quedaba suelta. El chip hacía un despeje
+  plano hacia puerta.
+- **Arreglado**:
+  - `_getAimDir()` (Player.gd): aim unificado teclado+joystick+touch; sin
+    input usa el **frente del jugador** → el pase SIEMPRE tiene dirección.
+  - `_findPass` (Team.gd) reescrito: **siempre devuelve el mejor compañero**
+    (alineación + progresión al ataque + penalización por marcado +
+    preferencia de distancia media). El balón ya no se suelta nunca.
+  - `_passBall` (SmartBall.gd): pase de seguridad raso controlado al frente.
+  - **Cambio de control inmediato al receptor** (estilo FC): al pasar,
+    controlas directo al que recibe.
+  - `chipPass`: cono relajado (0.55→0.3), arco balístico realista (la
+    distancia manda la potencia) y fallback de globo al espacio apuntado
+    (antes: patada plana a puerta).
+  - `thruPass`: si no hay receptor obvio, filtrado al espacio apuntado
+    (antes no pasaba nada).
+
+### 2. Textura del pasto — escala corregida
+- El tile de pasto2 cubría **medio campo** (1024px) → pasto gigante.
+- Ahora: base de `pasto.jpeg` espejada a 512px (rejilla sutil) + **300
+  parches suaves** de `pasto2` con feathering + ruido multi-octava +
+  suavizado TV (detalle de briznas a escala de cámara) + 16 franjas de
+  corte sutiles + líneas blancas originales nítidas + desgaste en áreas.
+
+### 3. Gráficos — de verdad esta vez
+- `project.binary` parcheado IN-PLACE en el PCK: `force_vertex_shading` OFF
+  (**iluminación por píxel**), Burley/Blinn-GGX, sombras direccionales
+  **2048→4096**, atlas de sombras **256→2048**.
+- Luz del estadio: bias 0.35→0.08 (sombras pegadas), normal_bias 1.5,
+  **specular 0.3** (brillos en balón/jugadores), color cálido neutro.
+- Entornos: **tonemap filmic**, glow sutil (bloom umbral 0.92), contraste
+  1.09 / saturación 1.14.
+
+### 4. Controles (teclado)
+`WASD` mover · `M` pase · `L` chip/globo · `I` filtrado · `J` tiro (cargar) ·
+`O` tenso/raso · `Q` sprint · `E` raso · `P`/`U` cambiar jugador
+
+---
+
+# Historial v2.1 (estilo FC)
 
 Este update añade la textura `pasto2.png` del usuario, mecánicas de juego estilo
 FC (regates, tiros finura, tiros picados, pases inteligentes), rediseño del radar,

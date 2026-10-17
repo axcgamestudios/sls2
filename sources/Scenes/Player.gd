@@ -156,6 +156,31 @@ func _clearBall() :
         ball._passBall( Vector3( myTeam.playDir * 3.0 , 1.0 , rand_range( - 0.5 , 0.5)) * 5.0 , self)
         myTeam.posession = false
         AI._losePosession()
+func _getAimDir() :
+        # v2.2: direccion de aim unificada (teclado + joystick + touch)
+        # si no hay input usa el frente del jugador -> el pase NUNCA queda sin direccion
+        var aim = Vector3.ZERO
+        if ( Input.is_action_pressed( "p1_left")) :
+                aim.x = - 1
+        elif ( Input.is_action_pressed( "p1_right")) :
+                aim.x = 1
+        if ( Input.is_action_pressed( "p1_up")) :
+                aim.z = - 1
+        elif ( Input.is_action_pressed( "p1_down")) :
+                aim.z = 1
+        aim.x += Input.get_joy_axis( myC , clr)
+        aim.z += Input.get_joy_axis( myC , cud) * jflip
+        if Global.touchPad.isActive() :
+                var m = Global.touchPad.get_force()
+                aim.x += m.x
+                aim.z += m.y * jflip * - 1.0
+        aim.y = 0.0
+        if aim.length() < 0.25 :
+                aim = - transform.basis.z
+                aim.y = 0.0
+        if aim.length() < 0.1 :
+                aim = Vector3( myTeam.playDir , 0 , 0)
+        return aim.normalized()
 func chipPass( var human) :
         if myTeam.zone == 3 :
                         canControl = false
@@ -224,18 +249,25 @@ func chipPass( var human) :
                         canControl = true
                         return true
         else :
-                var passV = myTeam._findLongPass( translation , - transform.basis.z , myID)
+                # v2.2: globo largo con direccion de aim (frente si no hay input)
+                var aimD = _getAimDir()
+                var passV = myTeam._findLongPass( translation , aimD , myID)
                 if ( passV) :
-                        var h = 0.4 + smoothstep( 0 , 100 , myTeam.passDir.length())
-                        ball._passBall( ( myTeam.passDir + Vector3( 0 , h * 30.0 , 0)) * 0.8 , self)
+                        # arco balistico: la distancia manda la potencia, loft fijo realista
+                        var plen = myTeam.passDir.length()
+                        var loft = 10.0 + smoothstep( 20.0 , 80.0 , plen) * 6.0
+                        ball._passBall( myTeam.passDir * 0.9 + Vector3( 0 , loft , 0) , self)
                         myTeam.momentum = true
                         myTeam.opponent.momentum = false
                         myTeam.posession = false
                         AI._losePosession()
+                        if not myTeam.AIteam and myTeam.passto :
+                                myTeam._switchPControl( myTeam.passto)
                         return true
                 elif human :
-                        var cdir = myGoal - translation
-                        ball._passBall( cdir * Vector3( 1.3 , 22.5 , 1.4) , self)
+                        # v2.2: FIX globo al espacio en la direccion de aim (antes: despeje plano a puerta)
+                        var lob = aimD * 38.0 + Vector3( 0 , 13.0 , 0)
+                        ball._passBall( lob , self)
                         myTeam.momentum = true
                         myTeam.opponent.momentum = false
                         myTeam.posession = false
@@ -459,21 +491,9 @@ func checkInput() :
                                 _fakeShot()
                                 return
                         shooting = false
-                        var passD = Vector3.ZERO
-                        if ( Input.is_action_pressed( "p1_left")) :
-                                passD.x = - 1
-                        elif ( Input.is_action_pressed( "p1_right")) :
-                                passD.x = 1
-                        if ( Input.is_action_pressed( "p1_up")) :
-                                passD.z = - 1
-                        elif ( Input.is_action_pressed( "p1_down")) :
-                                passD.z = 1
-                        passD.x += Input.get_joy_axis( myC , clr)
-                        passD.z += Input.get_joy_axis( myC , cud) * jflip
-                        if Global.touchPad.isActive() :
-                                var m = Global.touchPad.get_force()
-                                passD.x += m.x
-                                passD.z += m.y * jflip * - 1.0
+                        # v2.2 FIX: aim SIEMPRE valido (frente si no hay input) -
+                        # antes un toque sin direccion soltaba el balon
+                        var passD = _getAimDir()
                         myTeam.posession = false
                         var passV = myTeam._findPass( translation , passD , myID)
                         if ( passV) :
@@ -481,8 +501,12 @@ func checkInput() :
                                 var plen = myTeam.passDir.length()
                                 var pmul = clamp( plen * 0.022 + 0.55 , 0.8 , 1.45)
                                 ball._passBall( myTeam.passDir * pmul , self , Input.is_action_pressed( clow))
+                                # FC v2.2: control inmediato del receptor
+                                if not myTeam.AIteam and myTeam.passto :
+                                        myTeam._switchPControl( myTeam.passto)
                         else :
-                                ball._passBall( velocity , self)
+                                # v2.2 FIX: nunca soltar el balon - pase raso al espacio apuntado
+                                ball._passBall( passD * 26.0 , self)
                         AI._losePosession()
         elif ( Input.is_action_pressed( cpass)) :
                 if ( not AI._hasBall()) :
@@ -500,21 +524,8 @@ func checkInput() :
                         myfx.emitting = Global.doParticles
         elif Input.is_action_just_pressed( cthru) :
                 if AI._hasBall() :
-                        var passD = Vector3( 0 , 0 , 0)
-                        passD.x += Input.get_joy_axis( myC , clr)
-                        passD.z += Input.get_joy_axis( myC , cud) * jflip
-                        if Global.touchPad.isActive() :
-                                var m = Global.touchPad.get_force()
-                                passD.x += m.x
-                                passD.z += m.y * jflip * - 1.0
-                        if ( Input.is_action_pressed( "p1_left")) :
-                                passD.x = - 1
-                        elif ( Input.is_action_pressed( "p1_right")) :
-                                passD.x = 1
-                        if ( Input.is_action_pressed( "p1_up")) :
-                                passD.z = - 1
-                        elif ( Input.is_action_pressed( "p1_down")) :
-                                passD.z = 1
+                        # v2.2 FIX: aim siempre valido (frente si no hay input)
+                        var passD = _getAimDir()
                         lowshot = Input.is_action_pressed( clow)
                         AI._thruPass( passD)
                 elif ( Global.ballpos.y > 2) :

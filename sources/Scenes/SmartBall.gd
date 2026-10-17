@@ -138,10 +138,17 @@ func _passBall( var direction , var passer , var driven : bool = false) :
         player = null
         var dl = direction.length()
         if dl < 1.0 :
-                # fix: pase de seguridad hacia delante si no hay direccion
-                direction = - passer.transform.basis.z * 20.0
-                direction.y = 0.0
-                dl = direction.length()
+                # v2.2 fix: pase de seguridad raso y controlado al frente
+                # (antes: impulso explosivo 30 en la direccion por defecto)
+                var fwd = - passer.transform.basis.z
+                fwd.y = 0.0
+                if fwd.length() < 0.1 :
+                        fwd = Vector3( 1 , 0 , 0)
+                fwd = fwd.normalized()
+                isShot = false
+                $BallPassed.play()
+                apply_central_impulse( fwd * 16.0 + Vector3( 0 , 3.0 , 0))
+                return
         var dr = direction
         var ddl = max( minPassSpeed , min( dl , maxPassSpeed))
         if driven :

@@ -351,35 +351,44 @@ func _passTo( var p) :
         if p :
                 passto = p
 func _findPass( pos , lookD , id) :
+        # v2.2: reescrito - SIEMPRE devuelve el mejor compañero disponible
+        # (antes: sin direccion de aim no habia candidato y se soltaba el balon)
         var diff
         var candidate = null
         var res = lookD
-        var best = 1000000
+        var best = - 1000000.0
         var dopass = false
-        var tol = 0.05
-        var dl = 0
-        var dd = 0
+        var ld = lookD
+        ld.y = 0.0
+        if ld.length() < 0.1 :
+                ld = - players[ id].transform.basis.z
+                ld.y = 0.0
+        ld = ld.normalized()
         for i in range( 1 , 7) :
-                if i != id :
+                if i != id and players[ i].carded < 2 :
                         diff = ( ( players[ i].translation) + ( players[ i].velocity * 0.3)) - Global.ballpos
-                        var score = diff.normalized().dot( lookD.normalized())
-                        if players[ i].carded > 1 :
-                                score = - 1000
-                        if i == 0 :
-                                dl = score
-                        if score > dl :
-                                candidate = players[ i]
-                                res = diff
-                                dl = score
-                                dd = diff.length_squared()
-                                best = dd
-                        elif abs( score - dl) < tol :
-                                dd = diff.length_squared()
-                                if dd < best :
+                        diff.y = 0.0
+                        var dist = diff.length()
+                        if dist > 2.0 and dist < 95.0 :
+                                var dirn = diff.normalized()
+                                var score = dirn.dot( ld)
+                                # FC v2.2: bias de progresion al ataque
+                                score += dirn.x * playDir * 0.22
+                                # FC v2.2: penalizar receptor marcado
+                                var marked = 0.0
+                                for j in range( 1 , 7) :
+                                        var oppd = opponent.players[ j].translation - players[ i].translation
+                                        oppd.y = 0.0
+                                        var od = oppd.length()
+                                        if od < 7.0 :
+                                                marked += ( 7.0 - od) * 0.06
+                                score -= marked
+                                # preferir distancia media de pase
+                                score -= clamp( abs( dist - 18.0) * 0.006 , 0.0 , 0.3)
+                                if score > best :
                                         candidate = players[ i]
                                         res = diff
-                                        dl = score
-                                        best = dd
+                                        best = score
         if ( candidate) :
                 passDir = res
                 passDir.y = 0
@@ -444,12 +453,19 @@ func _findLongPass( pos , lookD , _id) :
         var best = 0
         var dopass = false
         var dl = 0
+        var ld = lookD
+        ld.y = 0.0
+        if ld.length() < 0.1 :
+                ld = - players[ _id].transform.basis.z
+                ld.y = 0.0
+        ld = ld.normalized()
         for i in range( 1 , 7) :
-                diff = ( players[ i].translation + ( goal - players[ i].translation) * 0.2) - pos
-                var score = diff.normalized().dot( lookD.normalized())
                 if players[ i].carded > 1 :
-                        score = - 1000
-                if ( players[ i].myID != _id) and score > 0.55 :
+                        continue
+                diff = ( players[ i].translation + ( goal - players[ i].translation) * 0.2) - pos
+                # v2.2: cono relajado 0.55 -> 0.3 para que el globo encuentre receptor
+                var score = diff.normalized().dot( ld)
+                if ( players[ i].myID != _id) and score > 0.3 :
                         dl = diff.length_squared()
                         if ( dl > best) :
                                 candidate = players[ i]

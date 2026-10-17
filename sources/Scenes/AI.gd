@@ -626,7 +626,15 @@ func _thruPass( var D) :
                 myPlayer.lowshot = true
                 myPlayer.chipPass( true)
                 return
-        var passTo = myTeam._findThruPass( pos , D , myPlayer.myID)
+        var passD = D
+        passD.y = 0.0
+        if passD.length() < 0.25 :
+                passD = - myPlayer.transform.basis.z
+                passD.y = 0.0
+        if passD.length() < 0.1 :
+                passD = Vector3( myTeam.playDir , 0 , 0)
+        passD = passD.normalized()
+        var passTo = myTeam._findThruPass( pos , passD , myPlayer.myID)
         if ( passTo) :
                 myTeam.passDir.y += 1
                 if myPlayer.lowshot :
@@ -637,6 +645,13 @@ func _thruPass( var D) :
                 myTeam.posession = false
                 myPlayer.lowshot = false
                 _losePosession()
+                return
+        # v2.2 FIX: filtrado al espacio en la direccion apuntada (antes no pasaba nada)
+        myTeam.passDir = passD * 24.0 + Vector3( 0 , 10.0 , 0)
+        myPlayer.ball._passBall( myTeam.passDir , myPlayer)
+        myTeam.posession = false
+        myPlayer.lowshot = false
+        _losePosession()
 func _thruPassAI( var _D , var candidate) :
         var passPos = candidate.translation - myGoal
         passPos = candidate.translation - ( passPos * 0.3)
